@@ -3,21 +3,22 @@ from __future__ import annotations
 import asyncio
 import datetime as dt
 import os
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import pandas as pd
+from dotenv import load_dotenv
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-import pandas as pd
-from dotenv import load_dotenv
 from timezonefinder import TimezoneFinder
 from zoneinfo import ZoneInfo
 
-from uv_providers.open_meteo import OpenMeteoProvider
-from uv_providers.openuv_stub import OpenUVProvider
-from uv_providers.weatherbit_stub import WeatherbitProvider
+from .uv_providers.open_meteo import OpenMeteoProvider
+from .uv_providers.openuv_stub import OpenUVProvider
+from .uv_providers.weatherbit_stub import WeatherbitProvider
 
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parent / ".env")
 
 app = FastAPI(title="UV Index Aggregator", version="0.2.0")
 

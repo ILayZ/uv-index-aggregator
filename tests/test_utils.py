@@ -1,11 +1,11 @@
 import sys
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).resolve().parents[1] / "backend"))
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-import app as app_module
-from app import cache_key, detect_tz
-from uv_providers.base import clamp_uv
+import backend.app as app_module
+from backend.app import cache_key, detect_tz
+from backend.uv_providers.base import clamp_uv
 
 
 def test_clamp_uv_none():
