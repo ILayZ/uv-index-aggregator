@@ -1,6 +1,9 @@
 from __future__ import annotations
-import os, math, asyncio, datetime as dt
-from typing import List, Dict, Any, Optional
+
+import asyncio
+import datetime as dt
+import os
+from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,6 +31,7 @@ app.add_middleware(
 
 TF = TimezoneFinder(in_memory=True)
 
+
 class HourBucket(BaseModel):
     time: str
     consensus: Optional[float] = None
@@ -37,11 +41,15 @@ class HourBucket(BaseModel):
     providers: Dict[str, Optional[float]] = Field(default_factory=dict)
     outliers: List[str] = Field(default_factory=list)
 
+
 class Summary(BaseModel):
     uv_max: Optional[float] = None
     uv_max_time: Optional[str] = None
     advice: List[str] = Field(default_factory=list)
-    windows: Dict[str, List[Dict[str, str]]] = Field(default_factory=dict)  # keys: best/moderate/avoid
+    windows: Dict[str, List[Dict[str, str]]] = Field(
+        default_factory=dict
+    )  # keys: best/moderate/avoid
+
 
 class UVResponse(BaseModel):
     lat: float
@@ -54,19 +62,24 @@ class UVResponse(BaseModel):
     hourly: List[HourBucket]
     summary: Summary
 
+
 # Simple in-memory cache: key -> (timestamp, data)
 _CACHE: Dict[str, Any] = {}
 
+
 def cache_key(lat: float, lon: float, date: str, tz: str) -> str:
     return f"{lat:.4f},{lon:.4f},{date},{tz}"
+
 
 def detect_tz(lat: float, lon: float) -> str:
     tzname = TF.timezone_at(lat=lat, lng=lon)
     return tzname or "UTC"
 
+
 @app.get("/health")
 def health():
     return {"ok": True}
+
 
 @app.get("/providers")
 def providers_status():
@@ -76,12 +89,16 @@ def providers_status():
         "weatherbit": bool(os.getenv("WEATHERBIT_API_KEY")),
     }
 
+
 @app.get("/uv", response_model=UVResponse)
 async def uv(
     lat: float = Query(..., ge=-90, le=90),
     lon: float = Query(..., ge=-180, le=180),
     date: str = Query(None, description="YYYY-MM-DD (defaults to today in UTC)"),
-    tz: Optional[str] = Query(None, description="IANA tz like 'UTC' or 'Europe/Madrid'. Use 'auto' or leave empty to detect."),
+    tz: Optional[str] = Query(
+        None,
+        description="IANA tz like 'UTC' or 'Europe/Madrid'. Use 'auto' or leave empty to detect.",
+    ),
 ):
     # Resolve tz
     if not tz or (isinstance(tz, str) and tz.lower() == "auto"):
@@ -170,7 +187,9 @@ async def uv(
             # Fallback: strip seconds
             return dt.datetime.fromisoformat(ts.split("+")[0])
 
-    def compress_windows(points: List[tuple[str, Optional[float]]], predicate) -> List[Dict[str, str]]:
+    def compress_windows(
+        points: List[tuple[str, Optional[float]]], predicate
+    ) -> List[Dict[str, str]]:
         """Compress consecutive hourly points satisfying predicate into [start,end) intervals."""
         intervals: List[Dict[str, str]] = []
         run_start = None
@@ -184,11 +203,15 @@ async def uv(
                 prev_t = ts
             elif (not ok) and run_start is not None:
                 # close the interval at prev_t + 1h
-                end = (parse_local(prev_t) + dt.timedelta(hours=1)).isoformat(timespec="minutes")
+                end = (parse_local(prev_t) + dt.timedelta(hours=1)).isoformat(
+                    timespec="minutes"
+                )
                 intervals.append({"start": run_start, "end": end})
                 run_start = None
         if run_start is not None:
-            end = (parse_local(prev_t) + dt.timedelta(hours=1)).isoformat(timespec="minutes")
+            end = (parse_local(prev_t) + dt.timedelta(hours=1)).isoformat(
+                timespec="minutes"
+            )
             intervals.append({"start": run_start, "end": end})
         return intervals
 
@@ -208,20 +231,30 @@ async def uv(
             if peak <= 2:
                 advice.append("Low: SPF optional; sunglasses if bright.")
             elif 3 <= peak <= 5:
-                advice.append("Moderate: SPF 30+, sunglasses, hat; seek shade around midday.")
+                advice.append(
+                    "Moderate: SPF 30+, sunglasses, hat; seek shade around midday."
+                )
             elif 6 <= peak <= 7:
-                advice.append("High: SPF 50, reapply every 2h; cover up; limit 11:00–17:00.")
+                advice.append(
+                    "High: SPF 50, reapply every 2h; cover up; limit 11:00–17:00."
+                )
             elif 8 <= peak <= 10:
-                advice.append("Very High: SPF 50+, reapply 2h; cover up; avoid 11:00–17:00.")
+                advice.append(
+                    "Very High: SPF 50+, reapply 2h; cover up; avoid 11:00–17:00."
+                )
             else:
-                advice.append("Extreme: SPF 50+, minimize time outdoors; full cover; avoid 10:00–18:00.")
-            advice.append("Reapply sunscreen every ~2 hours, and after swimming/sweating.")
+                advice.append(
+                    "Extreme: SPF 50+, minimize time outdoors; full cover; avoid 10:00–18:00."
+                )
+            advice.append(
+                "Reapply sunscreen every ~2 hours, and after swimming/sweating."
+            )
             summary.advice = advice
 
             # Windows
-            best = compress_windows(pairs, lambda v: v < 3)               # best exposure (low)
-            moderate = compress_windows(pairs, lambda v: 3 <= v < 6)      # moderate caution
-            avoid = compress_windows(pairs, lambda v: v >= 8)             # avoid peak
+            best = compress_windows(pairs, lambda v: v < 3)  # best exposure (low)
+            moderate = compress_windows(pairs, lambda v: 3 <= v < 6)  # moderate caution
+            avoid = compress_windows(pairs, lambda v: v >= 8)  # avoid peak
             summary.windows = {"best": best, "moderate": moderate, "avoid": avoid}
 
     # Choose now_bucket_time as the nearest hourly label
@@ -236,9 +269,12 @@ async def uv(
             # Pick nearest by absolute difference
             def abs_minutes(ts: str) -> int:
                 try:
-                    return abs(int((parse_local(ts) - now_hour_local).total_seconds() // 60))
+                    return abs(
+                        int((parse_local(ts) - now_hour_local).total_seconds() // 60)
+                    )
                 except Exception:
                     return 10**9
+
             now_bucket_time = min(times_index, key=abs_minutes)
 
     payload = UVResponse(

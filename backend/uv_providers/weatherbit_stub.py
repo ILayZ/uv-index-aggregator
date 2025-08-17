@@ -1,15 +1,26 @@
 from __future__ import annotations
-import os, httpx
-from typing import Dict, Any, List
+
+import httpx
+import os
+from typing import Any, Dict, List
+
 from .base import UVProvider, ProviderResult, clamp_uv
+
 
 class WeatherbitProvider(UVProvider):
     name = "weatherbit"
 
-    async def fetch(self, *, lat: float, lon: float, date: str, tz: str) -> ProviderResult:
+    async def fetch(
+        self, *, lat: float, lon: float, date: str, tz: str
+    ) -> ProviderResult:
         api_key = os.getenv("WEATHERBIT_API_KEY")
         if not api_key:
-            return ProviderResult(name=self.name, tz=tz, hourly=[], error="disabled (no WEATHERBIT_API_KEY)")
+            return ProviderResult(
+                name=self.name,
+                tz=tz,
+                hourly=[],
+                error="disabled (no WEATHERBIT_API_KEY)",
+            )
         # Weatherbit paid plans support hourly UV; for demo we call daily and duplicate as a placeholder.
         try:
             url = f"https://api.weatherbit.io/v2.0/forecast/daily?lat={lat}&lon={lon}&key={api_key}"
@@ -27,7 +38,9 @@ class WeatherbitProvider(UVProvider):
             if uv_day is not None:
                 # Fill 24 hours with the same value as a coarse forecast (placeholder)
                 for h in range(24):
-                    hourly.append({"time": f"{date}T{h:02d}:00:00Z", "uv": clamp_uv(uv_day)})
+                    hourly.append(
+                        {"time": f"{date}T{h:02d}:00:00Z", "uv": clamp_uv(uv_day)}
+                    )
             return ProviderResult(name=self.name, tz=tz, hourly=hourly)
         except Exception as e:
             return ProviderResult(name=self.name, tz=tz, hourly=[], error=str(e))
