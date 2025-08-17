@@ -1,6 +1,14 @@
 # UV Index Aggregator (weekend project)
 
-FastAPI backend with pluggable UV providers and a tiny static frontend (HTMX + Plotly). Ships consensus (median), confidence band (MAD), outlier flags, and per‑provider traces.
+FastAPI backend with pluggable UV providers and a tiny static frontend (HTMX + Plotly). The service aggregates hourly UV forecasts into a single consensus view with a MAD‑based confidence band, outlier flags, and per‑provider traces. It can automatically detect the timezone for the supplied coordinates and caches responses in‑memory to limit upstream API calls.
+
+## Features
+
+- Aggregate data from multiple providers: Open‑Meteo, OpenUV (optional), and Weatherbit (optional).
+- Median consensus with a Median Absolute Deviation (MAD) confidence band and outlier detection.
+- Automatic timezone detection via [`timezonefinder`](https://github.com/MrMinimal64/timezonefinder) or specify an IANA zone manually.
+- Lightweight in‑memory caching.
+- Static frontend for visualization using HTMX and Plotly.
 
 ## Run (no Docker)
 
@@ -38,7 +46,7 @@ Without keys, those providers are disabled; Open‑Meteo works out‑of‑the‑
 - `GET /providers` → provider availability and key presence
 - `GET /uv?lat=..&lon=..&date=YYYY-MM-DD&tz=UTC`
   - `date` defaults to **today (UTC)** if omitted
-  - `tz` is passed through to providers (Open‑Meteo supports IANA strings, e.g., `Europe/Madrid`)
+  - `tz` accepts an IANA string or `auto` to detect timezone from the coordinates
 
 ### Response shape (example)
 
@@ -66,6 +74,8 @@ Without keys, those providers are disabled; Open‑Meteo works out‑of‑the‑
   ]
 }
 ```
+
+The response also includes a `summary` object with the peak UV for the day, SPF guidance, and recommended exposure windows (`best`, `moderate`, `avoid`).
 
 ## Notes
 
