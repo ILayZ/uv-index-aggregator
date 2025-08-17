@@ -1,15 +1,23 @@
 from __future__ import annotations
-import os, httpx, datetime as dt
-from typing import Dict, Any, List
+
+import httpx
+import os
+from typing import Any, Dict, List
+
 from .base import UVProvider, ProviderResult, clamp_uv
+
 
 class OpenUVProvider(UVProvider):
     name = "openuv"
 
-    async def fetch(self, *, lat: float, lon: float, date: str, tz: str) -> ProviderResult:
+    async def fetch(
+        self, *, lat: float, lon: float, date: str, tz: str
+    ) -> ProviderResult:
         api_key = os.getenv("OPENUV_API_KEY")
         if not api_key:
-            return ProviderResult(name=self.name, tz=tz, hourly=[], error="disabled (no OPENUV_API_KEY)")
+            return ProviderResult(
+                name=self.name, tz=tz, hourly=[], error="disabled (no OPENUV_API_KEY)"
+            )
         # OpenUV's public API primarily returns current + short-term forecasts.
         # We'll sample each hour of the day with dt parameter if supported; otherwise return current only.
         headers = {"x-access-token": api_key}

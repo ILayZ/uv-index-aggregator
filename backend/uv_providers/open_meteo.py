@@ -1,12 +1,14 @@
 from __future__ import annotations
 import httpx
-from typing import Dict, Any
 from .base import UVProvider, ProviderResult, clamp_uv
+
 
 class OpenMeteoProvider(UVProvider):
     name = "open_meteo"
 
-    async def fetch(self, *, lat: float, lon: float, date: str, tz: str) -> ProviderResult:
+    async def fetch(
+        self, *, lat: float, lon: float, date: str, tz: str
+    ) -> ProviderResult:
         # Open-Meteo supports hourly uv_index and uv_index_clear_sky.
         # We request UTC by default; tz can be like 'UTC' or 'Europe/Madrid'.
         url = (
