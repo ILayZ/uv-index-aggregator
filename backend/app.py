@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import datetime as dt
+import math
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -14,9 +15,11 @@ from pydantic import BaseModel, Field
 from timezonefinder import TimezoneFinder
 from zoneinfo import ZoneInfo
 
-from .uv_providers.open_meteo import OpenMeteoProvider
-from .uv_providers.openuv_stub import OpenUVProvider
-from .uv_providers.weatherbit_stub import WeatherbitProvider
+from uv_providers.open_meteo import OpenMeteoProvider
+from uv_providers.openuv_stub import OpenUVProvider
+from uv_providers.weatherbit_stub import WeatherbitProvider
+from uv_providers.openweathermap import OpenWeatherMapProvider
+from uv_providers.visualcrossing import VisualCrossingProvider
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
@@ -88,6 +91,8 @@ def providers_status():
         "open_meteo": True,
         "openuv": bool(os.getenv("OPENUV_API_KEY")),
         "weatherbit": bool(os.getenv("WEATHERBIT_API_KEY")),
+        "openweathermap": bool(os.getenv("OPENWEATHERMAP_API_KEY")),
+        "visualcrossing": bool(os.getenv("VISUALCROSSING_API_KEY")),
     }
 
 
@@ -121,7 +126,13 @@ async def uv(
         zone = ZoneInfo("UTC")
     now_local = dt.datetime.now(dt.timezone.utc).astimezone(zone)
 
-    providers = [OpenMeteoProvider(), OpenUVProvider(), WeatherbitProvider()]
+    providers = [
+        OpenMeteoProvider(), 
+        OpenUVProvider(), 
+        WeatherbitProvider(),
+        OpenWeatherMapProvider(),
+        VisualCrossingProvider()
+    ]
 
     async def run(p):
         return await p.fetch(lat=lat, lon=lon, date=date, tz=tz)
@@ -155,16 +166,30 @@ async def uv(
         times_index = [str(i) for i in df_all.index]
         for ts, row in df_all.iterrows():
             vals = row.dropna().values.tolist()
-            pb = HourBucket(time=str(ts), providers=row.to_dict())
+            # Convert NaN values to None for JSON serialization
+            providers_data = {}
+            for k, v in row.to_dict().items():
+                if pd.isna(v) or not math.isfinite(v):
+                    providers_data[k] = None
+                else:
+                    providers_data[k] = float(v)
+            pb = HourBucket(time=str(ts), providers=providers_data)
             if len(vals) == 0:
                 hourly_out.append(pb)
                 continue
             series = pd.Series(vals)
             median = float(series.median())
             mad = float((series - median).abs().median())
+            
+            # Handle NaN/infinity values
+            if pd.isna(median) or not math.isfinite(median):
+                median = 0.0
+            if pd.isna(mad) or not math.isfinite(mad):
+                mad = 0.0
+                
             low = max(0.0, median - mad)
             high = min(15.0, median + mad)
-            confidence = max(0.0, min(1.0, 1.0 - (mad / 3.0)))
+            confidence = max(0.0, min(1.0, 1.0 - (mad / 3.0))) if mad > 0 else 1.0
             outliers = []
             if mad > 0:
                 for name, v in row.items():

@@ -1,0 +1,14 @@
+# Optional API keys for additional UV data providers
+# Copy this file to .env and add your actual API keys
+
+# OpenUV API key (get from https://www.openuv.io/)
+# OPENUV_API_KEY=your_openuv_api_key_here
+
+# Weatherbit API key (get from https://www.weatherbit.io/)
+# WEATHERBIT_API_KEY=your_weatherbit_api_key_here
+
+# OpenWeatherMap API key (get from https://openweathermap.org/api)
+# OPENWEATHERMAP_API_KEY=your_openweathermap_api_key_here
+
+# Visual Crossing API key (get from https://www.visualcrossing.com/)
+# VISUALCROSSING_API_KEY=your_visualcrossing_api_key_here
