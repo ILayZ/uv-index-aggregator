@@ -3,8 +3,6 @@ Pytest configuration for UI tests.
 """
 import pytest
 from pathlib import Path
-import asyncio
-from playwright.async_api import async_playwright
 
 
 @pytest.fixture
@@ -28,13 +26,3 @@ def test_coordinates():
 def backend_server():
     """Provide backend server URL for integration tests."""
     return "http://localhost:8080"
-
-
-@pytest.fixture
-async def page():
-    """Provide a Playwright page for async tests."""
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
-        yield page
-        await browser.close()

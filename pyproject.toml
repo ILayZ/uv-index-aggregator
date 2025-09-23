@@ -4,8 +4,7 @@ addopts = [
     "--strict-markers",
     "--strict-config", 
     "--verbose",
-    "--tb=short",
-    "--browser=chromium"
+    "--tb=short"
 ]
 testpaths = [
     "tests",
