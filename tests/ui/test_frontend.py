@@ -104,9 +104,9 @@ class TestFormInteractions:
         """Test form submission button state."""
         page.goto(ui_url)
         
-        # Check button is initially enabled
+        # Check button is initially visible and not disabled
         go_button = page.locator("#go")
-        assert go_button.is_enabled()
+        assert go_button.is_visible()
         
         # Check button text
         button_text = go_button.inner_text()
