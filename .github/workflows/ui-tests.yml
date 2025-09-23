@@ -55,7 +55,6 @@ jobs:
       run: |
         python -m pytest tests/ui/ \
           --browser=${{ matrix.browser }} \
-          --headed=false \
           --html=test-report-${{ matrix.browser }}.html \
           --self-contained-html \
           --cov=backend \
