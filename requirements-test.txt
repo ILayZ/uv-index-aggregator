@@ -1,0 +1,20 @@
+# Test Dependencies for UV Index Aggregator
+
+## Core Testing
+pytest==8.4.2
+pytest-asyncio==0.25.0
+pytest-cov==6.1.0
+pytest-html==4.1.1
+
+## UI Testing with Playwright
+playwright==1.50.0
+pytest-playwright==0.6.2
+
+## Additional Testing Utilities
+requests==2.32.3  # For HTTP testing
+Pillow==11.0.0    # For image comparison in visual tests
+
+## Development Dependencies
+black==24.10.0    # Code formatting
+flake8==7.1.1     # Linting
+mypy==1.14.0      # Type checking
