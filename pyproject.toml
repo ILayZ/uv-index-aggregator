@@ -1,0 +1,23 @@
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = [
+    "--strict-markers",
+    "--strict-config", 
+    "--verbose",
+    "--tb=short",
+    "--browser=chromium"
+]
+testpaths = [
+    "tests",
+]
+markers = [
+    "ui: marks tests as UI tests (using Playwright)",
+    "integration: marks tests as integration tests",
+    "visual: marks tests as visual regression tests",
+    "slow: marks tests as slow running",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore::RuntimeWarning",
+]
