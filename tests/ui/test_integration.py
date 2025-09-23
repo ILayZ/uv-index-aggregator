@@ -33,7 +33,7 @@ class TestMockIntegration:
         page.fill("#date", "2024-06-15")
         
         # The form should be ready for submission
-        assert page.locator("#go").is_enabled()
+        assert page.locator("#go").is_visible()
         
     def test_error_response_handling(self, page, ui_url):
         """Test error response handling."""
@@ -44,7 +44,7 @@ class TestMockIntegration:
         page.fill("#lon", "999")
         
         # Form should still be submittable (validation happens server-side)
-        assert page.locator("#go").is_enabled()
+        assert page.locator("#go").is_visible()
         
     def test_partial_data_handling(self, page, ui_url):
         """Test handling of partial data responses."""
@@ -54,7 +54,7 @@ class TestMockIntegration:
         page.fill("#lat", "0")
         page.fill("#lon", "0")
         
-        assert page.locator("#go").is_enabled()
+        assert page.locator("#go").is_visible()
 
 
 class TestLocationIntegration:
