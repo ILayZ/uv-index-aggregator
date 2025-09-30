@@ -106,11 +106,29 @@ jobs:
       env:
         PYTHONPATH: ${{ github.workspace }}
     
+    - name: Wait for server to be ready
+      run: |
+        for i in {1..30}; do
+          if curl -f http://localhost:8080/health; then
+            echo "Server is ready"
+            break
+          fi
+          echo "Waiting for server... ($i/30)"
+          sleep 2
+        done
+    
+    - name: Serve frontend files
+      run: |
+        cd frontend
+        python -m http.server 3000 &
+        sleep 5
+        echo "Frontend server started on port 3000"
+    
     - name: Audit URLs using Lighthouse CI
       uses: treosh/lighthouse-ci-action@v10
       with:
         urls: |
-          file://${{ github.workspace }}/frontend/index.html
+          http://localhost:3000
         configPath: ./.lighthouserc.json
         uploadArtifacts: true
         temporaryPublicStorage: true
