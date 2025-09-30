@@ -4,9 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="description" content="UV Index Aggregator - Get UV index data from multiple weather providers for any location and date to make informed sun exposure decisions." />
+  <meta name="theme-color" content="#0d6efd" />
+  <link rel="manifest" href="manifest.json" />
   <title>UV Index Aggregator</title>
-  <script src="https://unpkg.com/htmx.org@2.0.3"></script>
-  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <!-- Preload critical resources -->
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.plot.ly" crossorigin>
+  
+  <!-- Critical CSS inlined for faster rendering -->
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 24px; color: #212529; }
     .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
@@ -39,7 +44,30 @@
     .skip-link:focus {
       top: 6px;
     }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    /* Performance optimizations */
+    * {
+      box-sizing: border-box;
+    }
+    img {
+      max-width: 100%;
+      height: auto;
+    }
   </style>
+  
+  <!-- Load JavaScript asynchronously to prevent render blocking -->
+  <script src="https://unpkg.com/htmx.org@2.0.3" async></script>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" async></script>
 </head>
 <body>
   <a href="#main-content" class="skip-link">Skip to main content</a>
@@ -47,11 +75,11 @@
     <h1>UV Index Aggregator</h1>
     <form role="search" aria-label="UV data search form">
       <div class="row">
-        <div><label for="lat">Latitude</label><input id="lat" type="number" step="0.0001" value="37.1882" aria-label="Latitude coordinate"></div>
-        <div><label for="lon">Longitude</label><input id="lon" type="number" step="0.0001" value="-3.6067" aria-label="Longitude coordinate"></div>
-        <div><label for="date">Date (YYYY-MM-DD)</label><input id="date" type="text" value="" aria-label="Date in YYYY-MM-DD format"></div>
-        <div><label for="tz">Timezone</label><input id="tz" type="text" value="Europe/Madrid" placeholder="auto or IANA zone" aria-label="Timezone (auto or IANA zone)"></div>
-        <div><button id="go" type="button" aria-label="Fetch UV data for specified coordinates and date">Fetch UV Data</button></div>
+        <div><label for="lat">Latitude</label><input id="lat" name="lat" type="number" step="0.0001" value="37.1882" required aria-describedby="lat-desc"><small id="lat-desc" class="sr-only">Enter latitude coordinate between -90 and 90</small></div>
+        <div><label for="lon">Longitude</label><input id="lon" name="lon" type="number" step="0.0001" value="-3.6067" required aria-describedby="lon-desc"><small id="lon-desc" class="sr-only">Enter longitude coordinate between -180 and 180</small></div>
+        <div><label for="date">Date (YYYY-MM-DD)</label><input id="date" name="date" type="date" value="" aria-describedby="date-desc"><small id="date-desc" class="sr-only">Select date for UV data</small></div>
+        <div><label for="tz">Timezone</label><input id="tz" name="tz" type="text" value="Europe/Madrid" placeholder="auto or IANA zone" aria-describedby="tz-desc"><small id="tz-desc" class="sr-only">Enter timezone or use 'auto' for automatic detection</small></div>
+        <div><button id="go" type="submit" aria-describedby="go-desc">Fetch UV Data</button><small id="go-desc" class="sr-only">Submit form to fetch UV data for specified location and date</small></div>
       </div>
     </form>
 
@@ -63,161 +91,13 @@
   </main>
 
   <script>
-    function fetchData() {
-      const lat = document.getElementById('lat').value;
-      const lon = document.getElementById('lon').value;
-      const date = document.getElementById('date').value;
-      const tz = document.getElementById('tz').value; // 'auto' or explicit IANA zone
-      const qs = new URLSearchParams({ lat, lon });
-      if (date) qs.set('date', date);
-      if (tz) qs.set('tz', tz);
-      
-      // Show loading state
-      const result = document.getElementById('result');
-      const loadingDiv = document.createElement('div');
-      loadingDiv.setAttribute('role', 'status');
-      loadingDiv.setAttribute('aria-live', 'polite');
-      loadingDiv.setAttribute('aria-label', 'Loading UV data');
-      loadingDiv.style.padding = '20px';
-      loadingDiv.style.textAlign = 'center';
-      loadingDiv.style.color = '#6c757d';
-      loadingDiv.textContent = 'Loading UV data...';
-      result.innerHTML = '';
-      result.appendChild(loadingDiv);
-      result.style.display = 'block';
-      
-      fetch('http://localhost:8080/uv?' + qs.toString())
-        .then(r => r.json())
-        .then(draw)
-        .catch(err => {
-          const errorDiv = document.createElement('div');
-          errorDiv.setAttribute('role', 'alert');
-          errorDiv.setAttribute('aria-live', 'assertive');
-          errorDiv.style.color = '#dc3545';
-          errorDiv.style.padding = '12px';
-          errorDiv.style.border = '1px solid #f5c6cb';
-          errorDiv.style.backgroundColor = '#f8d7da';
-          errorDiv.style.borderRadius = '4px';
-          errorDiv.style.marginTop = '12px';
-          errorDiv.textContent = 'Error fetching UV data: ' + err;
-          
-          const result = document.getElementById('result');
-          result.innerHTML = '';
-          result.appendChild(errorDiv);
-          result.style.display = 'block';
-        });
-    }
-
-    function fmtTime(s) {
-      if (!s) return '';
-      // Display YYYY-MM-DD HH:MM
-      const t = s.replace('T',' ').replace(/:00:00$/, ':00');
-      return t.length > 16 ? t.slice(0,16) : t;
-    }
-
-    function draw(data) {
-      const times = data.hourly.map(h => h.time);
-      const consensus = data.hourly.map(h => h.consensus);
-      const low = data.hourly.map(h => h.low);
-      const high = data.hourly.map(h => h.high);
-
-      const traces = [];
-
-      // Confidence band (filled area)
-      traces.push({
-        x: times.concat(times.slice().reverse()),
-        y: high.concat(low.slice().reverse()),
-        name: 'Confidence band',
-        fill: 'tozeroy',
-        mode: 'lines',
-        line: { width: 0 },
-        hoverinfo: 'skip',
-        opacity: 0.2
-      });
-
-      // Consensus line
-      traces.push({
-        x: times, y: consensus,
-        name: 'Consensus (median)',
-        mode: 'lines+markers',
-        line: { width: 2 },
-      });
-
-      // Provider lines
-      const providerSet = new Set();
-      data.hourly.forEach(h => {
-        Object.keys(h.providers || {}).forEach(k => providerSet.add(k));
-      });
-      providerSet.forEach(name => {
-        const y = data.hourly.map(h => (h.providers && h.providers[name] !== undefined) ? h.providers[name] : null);
-        traces.push({ x: times, y, name, mode: 'lines', line: { width: 1 } });
-      });
-
-      // Outliers as markers
-      providerSet.forEach(name => {
-        const y = data.hourly.map(h => (h.outliers && h.outliers.includes(name)) ? h.providers[name] : null);
-        traces.push({ x: times, y, name: name + ' outlier', mode: 'markers', marker: { size: 6, symbol: 'x' }, showlegend: false });
-      });
-
-      const shapes = [];
-      if (data.now_bucket_time) {
-        shapes.push({
-          type: 'line', xref: 'x', yref: 'paper',
-          x0: data.now_bucket_time, x1: data.now_bucket_time,
-          y0: 0, y1: 1,
-          line: { width: 2, dash: 'dot' }
-        });
-      }
-
-      Plotly.newPlot('chart', traces, {
-        title: `UV Index for ${data.date} @ (${data.lat.toFixed(4)}, ${data.lon.toFixed(4)}) [${data.tz}]`,
-        yaxis: { title: 'UV Index', rangemode: 'tozero' },
-        xaxis: { title: 'Time' },
-        margin: { t: 50, r: 20, b: 50, l: 50 },
-        shapes
-      });
-
-      // Make result container visible after chart is created
-      document.getElementById('result').style.display = 'block';
-
-      // Summary card
-      const s = data.summary || {};
-      const best = (s.windows && s.windows.best) ? s.windows.best : [];
-      const moderate = (s.windows && s.windows.moderate) ? s.windows.moderate : [];
-      const avoid = (s.windows && s.windows.avoid) ? s.windows.avoid : [];
-
-      function renderIntervals(arr) {
-        if (!arr || !arr.length) return '<i>None</i>';
-        return '<ul>' + arr.map(w => `<li>${fmtTime(w.start)} → ${fmtTime(w.end)}</li>`).join('') + '</ul>';
-      }
-
-      const adviceList = (s.advice || []).map(a => `<li>${a}</li>`).join('');
-
-      document.getElementById('summary').innerHTML = `
-        <h2>UV Index Summary</h2>
-        <div><span class="k">Now:</span> ${fmtTime(data.now_local_iso)} (${data.tz})</div>
-        <div><span class="k">Peak UV:</span> ${s.uv_max ?? '–'} at ${fmtTime(s.uv_max_time)}</div>
-        <h3 style="margin-top:12px; margin-bottom:6px;">SPF & Sun Safety</h3>
-        <ul>${adviceList || '<li><i>No advice (no data)</i></li>'}</ul>
-        <h3 style="margin-top:12px; margin-bottom:6px;">Exposure Windows</h3>
-        <div><strong>Best</strong> (UV < 3): ${renderIntervals(best)}</div>
-        <div><strong>Moderate</strong> (3 ≤ UV < 6): ${renderIntervals(moderate)}</div>
-        <div><strong>Avoid</strong> (UV ≥ 8): ${renderIntervals(avoid)}</div>
-      `;
-
-      // Providers meta
-      const meta = (data.providers || []).map(p => {
-        if (p.error) return `<li><b>${p.name}</b>: <i>${p.error}</i></li>`;
-        return `<li><b>${p.name}</b>: OK</li>`;
-      }).join('');
-      document.getElementById('providers').innerHTML = `
-        <h2>Data Providers</h2>
-        <ul>${meta}</ul>
-        <p class="meta">Tip: leave <code>Timezone</code> as <code>auto</code> for automatic detection based on coordinates.</p>
-      `;
-    }
-
-    document.getElementById('go').addEventListener('click', fetchData);
+    // Optimized and minified JavaScript for better performance
+    function checkLibs(){return typeof Plotly!=='undefined'&&typeof htmx!=='undefined'}
+    function waitLibs(){return new Promise(r=>{if(checkLibs()){r();return}const i=setInterval(()=>{if(checkLibs()){clearInterval(i);r()}},50);setTimeout(()=>{clearInterval(i);r()},5000)})}
+    function fetchData(){const lat=document.getElementById('lat').value,lon=document.getElementById('lon').value,date=document.getElementById('date').value,tz=document.getElementById('tz').value,qs=new URLSearchParams({lat,lon});if(date)qs.set('date',date);if(tz)qs.set('tz',tz);const result=document.getElementById('result'),loadingDiv=document.createElement('div');loadingDiv.setAttribute('role','status');loadingDiv.setAttribute('aria-live','polite');loadingDiv.setAttribute('aria-label','Loading UV data');loadingDiv.style.cssText='padding:20px;text-align:center;color:#6c757d';loadingDiv.textContent='Loading UV data...';result.innerHTML='';result.appendChild(loadingDiv);result.style.display='block';fetch('http://localhost:8080/uv?'+qs.toString()).then(r=>r.json()).then(draw).catch(err=>{const errorDiv=document.createElement('div');errorDiv.setAttribute('role','alert');errorDiv.setAttribute('aria-live','assertive');errorDiv.style.cssText='color:#dc3545;padding:12px;border:1px solid #f5c6cb;background-color:#f8d7da;border-radius:4px;margin-top:12px';errorDiv.textContent='Error fetching UV data: '+err;result.innerHTML='';result.appendChild(errorDiv);result.style.display='block'})}
+    function fmtTime(s){if(!s)return '';const t=s.replace('T',' ').replace(/:00:00$/,':00');return t.length>16?t.slice(0,16):t}
+    async function draw(data){await waitLibs();if(typeof Plotly==='undefined'){console.error('Plotly failed to load');document.getElementById('chart').innerHTML='<p style="color: #dc3545;">Chart library failed to load. Please refresh the page.</p>';return}const times=data.hourly.map(h=>h.time),consensus=data.hourly.map(h=>h.consensus),low=data.hourly.map(h=>h.low),high=data.hourly.map(h=>h.high),traces=[];traces.push({x:times.concat(times.slice().reverse()),y:high.concat(low.slice().reverse()),name:'Confidence band',fill:'tozeroy',mode:'lines',line:{width:0},hoverinfo:'skip',opacity:0.2});traces.push({x:times,y:consensus,name:'Consensus (median)',mode:'lines+markers',line:{width:2}});const providerSet=new Set();data.hourly.forEach(h=>{Object.keys(h.providers||{}).forEach(k=>providerSet.add(k))});providerSet.forEach(name=>{const y=data.hourly.map(h=>(h.providers&&h.providers[name]!==undefined)?h.providers[name]:null);traces.push({x:times,y,name,mode:'lines',line:{width:1}})});providerSet.forEach(name=>{const y=data.hourly.map(h=>(h.outliers&&h.outliers.includes(name))?h.providers[name]:null);traces.push({x:times,y,name:name+' outlier',mode:'markers',marker:{size:6,symbol:'x'},showlegend:false})});const shapes=[];if(data.now_bucket_time){shapes.push({type:'line',xref:'x',yref:'paper',x0:data.now_bucket_time,x1:data.now_bucket_time,y0:0,y1:1,line:{width:2,dash:'dot'}})}Plotly.newPlot('chart',traces,{title:`UV Index for ${data.date} @ (${data.lat.toFixed(4)}, ${data.lon.toFixed(4)}) [${data.tz}]`,yaxis:{title:'UV Index',rangemode:'tozero'},xaxis:{title:'Time'},margin:{t:50,r:20,b:50,l:50},shapes});document.getElementById('result').style.display='block';const s=data.summary||{},best=(s.windows&&s.windows.best)?s.windows.best:[],moderate=(s.windows&&s.windows.moderate)?s.windows.moderate:[],avoid=(s.windows&&s.windows.avoid)?s.windows.avoid:[];function renderIntervals(arr){if(!arr||!arr.length)return '<i>None</i>';return '<ul>'+arr.map(w=>`<li>${fmtTime(w.start)} → ${fmtTime(w.end)}</li>`).join('')+'</ul>'}const adviceList=(s.advice||[]).map(a=>`<li>${a}</li>`).join('');document.getElementById('summary').innerHTML=`<h2>UV Index Summary</h2><div><span class="k">Now:</span> ${fmtTime(data.now_local_iso)} (${data.tz})</div><div><span class="k">Peak UV:</span> ${s.uv_max??'–'} at ${fmtTime(s.uv_max_time)}</div><h3 style="margin-top:12px; margin-bottom:6px;">SPF & Sun Safety</h3><ul>${adviceList||'<li><i>No advice (no data)</i></li>'}</ul><h3 style="margin-top:12px; margin-bottom:6px;">Exposure Windows</h3><div><strong>Best</strong> (UV < 3): ${renderIntervals(best)}</div><div><strong>Moderate</strong> (3 ≤ UV < 6): ${renderIntervals(moderate)}</div><div><strong>Avoid</strong> (UV ≥ 8): ${renderIntervals(avoid)}</div>`;const meta=(data.providers||[]).map(p=>{if(p.error)return `<li><b>${p.name}</b>: <i>${p.error}</i></li>`;return `<li><b>${p.name}</b>: OK</li>`}).join('');document.getElementById('providers').innerHTML=`<h2>Data Providers</h2><ul>${meta}</ul><p class="meta">Tip: leave <code>Timezone</code> as <code>auto</code> for automatic detection based on coordinates.</p>`}
+    document.addEventListener('DOMContentLoaded',function(){const form=document.querySelector('form');form.addEventListener('submit',function(e){e.preventDefault();fetchData()});const today=new Date().toISOString().split('T')[0];document.getElementById('date').value=today;if('serviceWorker'in navigator){navigator.serviceWorker.register('/sw.js')}});
   </script>
 </body>
 </html>
