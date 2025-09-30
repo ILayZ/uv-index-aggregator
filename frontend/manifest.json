@@ -1,0 +1,17 @@
+{
+  "name": "UV Index Aggregator",
+  "short_name": "UV Index",
+  "description": "Get UV index data from multiple weather providers for any location and date",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0d6efd",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='20' fill='%23ffc107'/%3E%3Cpath d='M50 10v10M50 80v10M10 50h10M80 50h10M25.86 25.86l7.07 7.07M67.07 67.07l7.07 7.07M25.86 74.14l7.07-7.07M67.07 32.93l7.07-7.07' stroke='%23ffc107' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

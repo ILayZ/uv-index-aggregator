@@ -9,8 +9,10 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 from dotenv import load_dotenv
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from timezonefinder import TimezoneFinder
 from zoneinfo import ZoneInfo
@@ -32,6 +34,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files for frontend
+frontend_path = Path(__file__).parent.parent / "frontend"
+app.mount("/static", StaticFiles(directory=frontend_path), name="static")
 
 TF = TimezoneFinder(in_memory=True)
 
@@ -80,6 +86,26 @@ def detect_tz(lat: float, lon: float) -> str:
     return tzname or "UTC"
 
 
+@app.get("/")
+async def root():
+    """Serve the main frontend page"""
+    return FileResponse(Path(__file__).parent.parent / "frontend" / "index.html")
+
+@app.get("/manifest.json")
+async def manifest():
+    """Serve the web app manifest"""
+    response = FileResponse(Path(__file__).parent.parent / "frontend" / "manifest.json")
+    response.headers["Cache-Control"] = "public, max-age=3600"
+    return response
+
+@app.get("/sw.js")
+async def service_worker():
+    """Serve the service worker"""
+    response = FileResponse(Path(__file__).parent.parent / "frontend" / "sw.js")
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["Service-Worker-Allowed"] = "/"
+    return response
+
 @app.get("/health")
 def health():
     return {"ok": True}
@@ -98,6 +124,7 @@ def providers_status():
 
 @app.get("/uv", response_model=UVResponse)
 async def uv(
+    response: Response,
     lat: float = Query(..., ge=-90, le=90),
     lon: float = Query(..., ge=-180, le=180),
     date: str = Query(None, description="YYYY-MM-DD (defaults to today in UTC)"),
@@ -316,4 +343,10 @@ async def uv(
     ).model_dump()
 
     _CACHE[key] = payload
+    
+    # Add caching headers for better performance
+    # Cache for 5 minutes (UV data doesn't change very frequently)
+    response.headers["Cache-Control"] = "public, max-age=300"
+    response.headers["ETag"] = f'"{hash(str(payload))}"'
+    
     return payload
