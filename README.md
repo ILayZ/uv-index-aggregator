@@ -24,6 +24,21 @@ uvicorn app:app --reload
 
 Open `frontend/index.html` in your browser and click **Fetch** (backend runs at `http://localhost:8080`).
 
+## Record a frontend demo
+
+You can capture a short video that demonstrates the frontend changes without
+starting the backend. The recorder spins up a temporary static file server,
+mocks the `/uv` API response with bundled sample data, and saves a WebM video.
+
+```bash
+pip install playwright
+playwright install chromium
+python scripts/record_demo.py --output demo/uv-index-demo.webm
+```
+
+The script writes the clip to the `demo/` directory by default; pass a
+different `--output` path if you prefer another location or filename.
+
 ## Docker
 
 ```bash
